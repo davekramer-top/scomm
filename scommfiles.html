@@ -1,0 +1,158 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>String Encryption and Decryption</title>
+  <style>
+    .errorcolor {
+        background-color: red;
+    }      
+    .highlighton {
+        background-color: green;
+    }    
+    .highlightoff {
+        background-color: white;
+        transition: background-color 5s ease; /* Smooth transition over 5 seconds */
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .half {
+      padding: 10px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    textarea {
+      width: 100%; /* Adjust textarea width to 100% */
+    }
+    .inline-form {
+      display: flex;
+      align-items: center;
+    }
+    .inline-form select, .inline-form input, .inline-form button {
+      margin-right: 10px;
+    }
+
+  </style>
+  <script src="crypto-js.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+      document.getElementById('salt').focus();
+    });
+  </script>  
+</head>
+<body>
+
+<script>
+    function encryptText() {
+      const decryptedText = document.getElementById("decryptedText").value;
+      const salt = document.getElementById("salt").value;
+
+      if (decryptedText && salt) {
+        const encrypted = CryptoJS.AES.encrypt(decryptedText, salt).toString();
+        document.getElementById("encryptedText").value = encrypted; // Set value to the result textarea
+      } else {
+        spanElement.textContent = "Please enter text and a salt value.";
+      }
+    }
+
+    function decryptText() {
+      const encryptedText = document.getElementById("encryptedText").value;
+      const decryptedText = document.getElementById("decryptedText");      
+      const salt = document.getElementById("salt").value;
+      var spanElement = document.getElementById('filetitle');
+
+      if (encryptedText && salt) {
+        try {
+          const decrypted = CryptoJS.AES.decrypt(encryptedText, salt).toString(CryptoJS.enc.Utf8);
+          document.getElementById("decryptedText").value = decrypted; // Set value to the input textarea
+          spanElement.textContent = '';
+          decryptedText.disabled = false;    
+        } catch (error) {
+          spanElement.textContent = "Decryption failed. Please check the salt or encrypted text.";
+        }
+      } else {
+        spanElement.textContent = "Please enter a salt value.";
+      }
+    }
+
+    function saveText() {
+      var encryptedText = document.getElementById('encryptedText').value;
+      var clearText = document.getElementById('decryptedText').value;
+      var url = 'scomm-savetext-ajax.php';
+      const salt = document.getElementById("salt").value;
+      var testdecrypted = '';
+      var currentTime = new Date().toLocaleTimeString();
+      var spanElement = document.getElementById('filetitle');
+      var xhr = new XMLHttpRequest();
+      var filename = document.getElementById('filename').value;
+
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+          if (xhr.status === 200) {
+
+            testdecrypted = CryptoJS.AES.decrypt(xhr.responseText, salt).toString(CryptoJS.enc.Utf8);
+
+            if (testdecrypted === clearText) {
+              console.log(testdecrypted + " * " + clearText + " Verification Strings are equal.");
+              spanElement.textContent = 'Saved: ' + currentTime;     
+              spanElement.classList.remove('errorcolor');  
+              spanElement.classList.remove('highlightoff');  
+              spanElement.classList.add('highlighton');     
+
+              setTimeout(function() {
+                  spanElement.classList.remove('highlighton');
+                  spanElement.classList.add('highlightoff');
+              }, 1000); // Adjust the delay as needed
+
+            } else {
+              console.error(testdecrypted + " * " + clearText + " Verification Strings are not equal.");
+              spanElement.textContent = 'Save Error';   
+              spanElement.classList.add('errorcolor');       
+            }
+
+          } else {
+            console.error('Error saving text:', xhr.status, xhr.statusText);
+          }
+        }
+      };
+
+      var data = 'encryptedText=' + encodeURIComponent(encryptedText) + '&filename=' + encodeURIComponent(filename);
+
+      xhr.open('POST', url, true);
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      xhr.send(data);
+    }
+
+  </script>
+    <div class="inline-form">
+        <form action="" method="post" id="fileForm">
+    <select name="selected-file" id="file-select" onchange="document.getElementById('fileForm').submit()" tabindex="1">
+      <option value="">-- Select a file --</option>
+      <option value="hash.txt">hash.txt</option><option value="leather.txt">leather.txt</option><option value="test.txt">test.txt</option><option value="test2.txt">test2.txt</option>    </select>
+  </form>
+      <input type="password" id="salt" onblur="decryptText()" tabindex="2" placeholder="salt">
+      <input type="text" id="filename" value="hash.txt" tabindex="4">
+      <button onclick="saveText()">Save</button>
+    </div>
+    
+<!--            <button onclick="decryptText()">Decrypt Text</button> &nbsp; <button onclick="encryptText()">Encrypt Text</button> &nbsp; -->
+    
+      <div class="container">
+        <div class="half">
+          <h2>My Text Area: (hash.txt)</h2>
+          <span id="filetitle"></span>
+          <textarea id="decryptedText" rows="30" cols="50" oninput="encryptText()" tabindex="3" disabled>&#10;hash.txt File Loaded&#10;&#10;Now Waiting for decryption key...</textarea><br>
+        </div>
+        <div class="half" style="display: none;">
+          <h2>Encrypted Text:</h2>
+          <textarea id="encryptedText" rows="10" cols="50" oninput="decryptText()">U2FsdGVkX1+w5r1ZT1ksUmxBpThyVxlKyxcorYn93tekz75haSx7eynOgcjZHtIRUZ21KBKqAJCN+PHV6H4mqwntnl0aveO4pY3tBno7MZyGKFaq88v1EG2AIlDC+b/5Zx25k0Gv6Mk71IBrWlIqqp6tNqNi4McJ6xFlxlxehLyjqHpdTxC0RhjhMxQxoJ+95q0DyWiymMVNmZdGcPsStxIh24A31ZCvkgYrKi47NZiQ8t85D5DQmuJbQq9klMiVqrBavSdkqYwRPGdSAKXpr5eiZWvVWkolQ9nX43noZriv/dfJ9jaoQQr64a/74TGo4gBqoEVDzVgxWQJ4pL+nSNQuyP/+VmfPsFADfMJU4kkyVW4Kvev+YExelE7O5K9abygsmQTcPQ0NVUeEU4kYgA==</textarea>
+        </div>
+      </div>
+
+</body>
+</html>
